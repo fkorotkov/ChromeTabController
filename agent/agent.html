@@ -1,2 +1,30 @@
-<script>
+<script type="text/javascript">
+    var ws;
+    var tabIDs2URLs = {};
+    if ("WebSocket" in window) {
+        ws = new WebSocket("ws://127.0.0.1:5239");
+    }
+    if (ws == null) {
+        Alert.show("No websocket!!!!");
+    }
+    ws.onmessage = function (evt) {
+        var msg = evt.data;
+
+        switch (msg[0]) {
+            case '0':
+                //create new tab
+                chrome.tabs.create({url:msg.substring(1)}, function (tab) {
+                    tabIDs2URLs[tab.id] = [msg.substring(1)];
+                });
+                break;
+        }
+    };
+
+    chrome.tabs.onCreated.addListener(function (tab) {
+        ws.send("onCreated: " + tab.toString());
+    });
+
+    chrome.tabs.onUpdated.addListener(function (tab) {
+        ws.send("onUpdated: " + tab.toString());
+    });
 </script>
