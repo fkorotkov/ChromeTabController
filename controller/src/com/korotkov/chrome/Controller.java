@@ -1,71 +1,36 @@
 package com.korotkov.chrome;
 
-import com.korotkov.util.WebSocketUtil;
+import net.tootallnate.websocket.WebSocket;
+import net.tootallnate.websocket.WebSocketServer;
 
-import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
 
-public class Controller implements Runnable {
-    private final BufferedReader in;
-    private final OutputStream out;
-
-    public Controller(InputStream inputStream, OutputStream outputStream) {
-        in = new BufferedReader(new InputStreamReader(inputStream));
-        out = outputStream;
+public class Controller extends WebSocketServer {
+    public Controller(int port) {
+        super(port);
     }
 
-    public static Controller accept(final int port) throws IOException {
-        final ServerSocket serverSocket = new ServerSocket(port);
-        final Socket socket = serverSocket.accept();
-        return new Controller(socket.getInputStream(), socket.getOutputStream());
+    @Override
+    public void onClientOpen(WebSocket webSocket) {
+        System.out.println("open: " + webSocket.toString());
     }
 
-    public void run() {
-        try {
-            process();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @Override
+    public void onClientClose(WebSocket webSocket) {
+        System.out.println("close: " + webSocket.toString());
     }
 
-    public void process() throws IOException {
-        String input;
-        while ((input = in.readLine()) != null) {
-            System.out.println(input);
-        }
+    @Override
+    public void onClientMessage(WebSocket webSocket, String s) {
+        System.out.println("msg: " + s);
     }
 
-    public void sendUrl(String msg) {
-        send('0' + msg);
+    @Override
+    public void onError(Throwable throwable) {
+        throwable.printStackTrace();
     }
 
-    public void send(String msg) {
-        final byte[] data;
-        try {
-            data = WebSocketUtil.wrapMessage(msg.getBytes("UTF-8"));
-            out.write(data);
-            out.flush();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void handShake() {
-        try {
-            final List<String> response = new ArrayList<String>();
-            String input;
-            while ((input = in.readLine()) != null) {
-                response.add(input);
-            }
-            out.write(WebSocketUtil.getHandShakeResponse(response));
-            out.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void sendUrl(String msg) throws IOException {
+        sendToAll('0' + msg);
     }
 }

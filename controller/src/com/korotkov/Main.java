@@ -7,10 +7,9 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        final Controller controller = Controller.accept(5239);
-        controller.handShake();
-        System.out.println("accepted!");
-        new Thread(controller).start();
+        final Controller controller = new Controller(5239);
+        controller.start();
+        System.out.println("started!");
         final Scanner in = new Scanner(System.in);
         while (true) {
             final String msg = in.next();
