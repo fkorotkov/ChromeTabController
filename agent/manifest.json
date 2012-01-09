@@ -1,0 +1,9 @@
+{
+  "name": "Tab controller agent",
+  "description": "Control tabs with socket",
+  "version": "0.1",
+  "background_page": "agent.html",
+  "permissions": [
+    "tabs"
+  ]
+}
