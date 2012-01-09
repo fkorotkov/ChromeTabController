@@ -16,7 +16,11 @@ public class Main {
             if ("exit".equals(msg)) {
                 break;
             }
-            controller.sendUrl(msg);
+            if (msg.matches("\\d+")) {
+                controller.removeTab(Integer.parseInt(msg));
+            } else {
+                controller.createTab(msg);
+            }
         }
     }
 }

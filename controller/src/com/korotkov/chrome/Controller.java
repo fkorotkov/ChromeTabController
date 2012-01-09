@@ -30,7 +30,11 @@ public class Controller extends WebSocketServer {
         throwable.printStackTrace();
     }
 
-    public void sendUrl(String msg) throws IOException {
-        sendToAll('0' + msg);
+    public void createTab(String url) throws IOException {
+        sendToAll('c' + url);
+    }
+
+    public void removeTab(int tabID) throws IOException {
+        sendToAll("r" + tabID);
     }
 }
