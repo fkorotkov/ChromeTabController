@@ -1,47 +1,92 @@
 <script type="text/javascript">
-    var ws;
-    var tabIDs2URLs = {};
-    if ("WebSocket" in window) {
-        ws = new WebSocket("ws://127.0.0.1:5239");
-    }
-    if (ws == null) {
-        Alert.show("No websocket!!!!");
-    }
-    ws.onmessage = function (evt) {
-        var msg = evt.data;
+    main();
 
-        switch (msg[0]) {
-            case 'c':
-                //create new tab
-                chrome.tabs.create({url:msg.substring(1)}, function (tab) {
-                    ws.send("cr\t" + tab.id + "\t" + msg.substring(1));
-                    tabIDs2URLs[tab.id] = msg.substring(1);
-                });
-                break;
-            case 'r':
-                //create new tab
-                chrome.tabs.remove(Number(msg.substring(1)));
-                break;
-        }
-    };
+    function defined(obj) {
+        return typeof(obj) != 'undefined';
+    }
 
-    chrome.tabs.onUpdated.addListener(function (tabID) {
-        if (tabIDs2URLs[tabID] == null) {
+    function main() {
+        if (!defined(chrome)) {
+            console.log("need chrome");
             return;
         }
-        chrome.tabs.get(tabID, function (tab) {
-            var lastURL = tabIDs2URLs[tab.id];
-            if (tab.url != lastURL) {
-                ws.send("rd\t" + tab.id + "\t" + tab.url);
-                tabIDs2URLs[tab.id] = tab.url;
-            }
-            if (tab.status == "complete") {
-                ws.send("cmpl\t" + tab.id);
-            }
-        });
-    });
+        if (!("WebSocket" in window)) {
+            console.log("no socket");
+            return;
+        }
+        var ws = null;
+        var tabIDs2URLs = {};
 
-    chrome.tabs.onRemoved.addListener(function (tabID, removeInfo) {
-        delete tabIDs2URLs[tabID];
-    });
+        connectToServer();
+
+        function connectToServer() {
+            ws = new WebSocket("ws://127.0.0.1:5239");
+            ws.onmessage = function (evt) {
+                var msg = evt.data;
+
+                switch (msg[0]) {
+                    case 'c':
+                        //create new tab
+                        chrome.tabs.create({url:msg.substring(1)}, function (tab) {
+                            ws.send("cr\t" + tab.id + "\t" + msg.substring(1));
+                            tabIDs2URLs[tab.id] = msg.substring(1);
+                        });
+                        break;
+                    case 'r':
+                        //remove tab
+                        chrome.tabs.remove(Number(msg.substring(1)));
+                        break;
+                }
+            };
+
+            ws.onclose = function (evt) {
+                setTimeout(connectToServer, 1000);
+            }
+
+            ws.onopen = function (env) {
+                if (!defined(chrome.tabs)) {
+                    sendTabsInfo();
+                } else {
+                    chrome.tabs.query({}, function (tabs) {
+                        for (var i = 0; i < tabs.length; ++i) {
+                            tabIDs2URLs[tabs[i].id] = tabs[i].url;
+                        }
+                        sendTabsInfo();
+                    });
+                }
+            }
+
+            function sendTabsInfo() {
+                var message = "tabs";
+                for (tabID in tabIDs2URLs) {
+                    message += '\t' + tabID + '\t' + tabIDs2URLs[tabID];
+                }
+                ws.send(message);
+            }
+        }
+
+        if (chrome == null) {
+            exit()
+        }
+
+        chrome.tabs.onUpdated.addListener(function (tabID) {
+            if (tabIDs2URLs[tabID] == null) {
+                return;
+            }
+            chrome.tabs.get(tabID, function (tab) {
+                var lastURL = tabIDs2URLs[tab.id];
+                if (tab.url != lastURL) {
+                    ws.send("rd\t" + tab.id + "\t" + tab.url);
+                    tabIDs2URLs[tab.id] = tab.url;
+                }
+                if (tab.status == "complete") {
+                    ws.send("cmpl\t" + tab.id);
+                }
+            });
+        });
+
+        chrome.tabs.onRemoved.addListener(function (tabID, removeInfo) {
+            delete tabIDs2URLs[tabID];
+        });
+    }
 </script>
